@@ -3,6 +3,62 @@
 
 -------------------------------------------------------------------------------------------------------------
 
+## 5.3.5 (2020-05-13)
+
+### 新特性
+* 【core   】     增加CollUtil.map方法
+* 【extra  】     增加Sftp.lsEntries方法，Ftp和Sftp增加recursiveDownloadFolder（pr#121@Gitee）
+* 【system 】     OshiUtil增加getNetworkIFs方法
+* 【core   】     CollUtil增加unionDistinct、unionAll方法（pr#122@Gitee）
+* 【core   】     增加IoUtil.readObj重载，通过ValidateObjectInputStream由用户自定义安全检查。
+* 【http   】     改造HttpRequest中文件上传部分，增加MultipartBody类
+
+### Bug修复
+* 【core   】     修复IoUtil.readObj中反序列化安全检查导致的一些问题，去掉安全检查。
+* 【http   】     修复SimpleServer文件访问404问题（issue#I1GZI3@Gitee）
+* 【core   】     修复BeanCopier中循环引用逻辑问题（issue#I1H2VN@Gitee）
+
+-------------------------------------------------------------------------------------------------------------
+
+## 5.3.4 (2020-05-10)
+
+### 新特性
+* 【core   】     增加URLUtil.getContentLength方法（issue#I1GB1Z@Gitee）
+* 【extra  】     增加PinyinUtil（issue#I1GMIV@Gitee）
+
+### Bug修复
+* 【extra  】     修复Ftp设置超时问题（issue#I1GMTQ@Gitee）
+* 【core   】     修复TreeUtil根据id查找子节点时的NPE问题（pr#120@Gitee）
+* 【core   】     修复BeanUtil.copyProperties中Alias注解无效问题（issue#I1GK3M@Gitee）
+* 【core   】     修复CollUtil.containsAll空集合判断问题（issue#I1G9DE@Gitee）
+* 【core   】     修复XmlUtil.xmlToBean失败问题（issue#865@Github）
+
+-------------------------------------------------------------------------------------------------------------
+
+## 5.3.3 (2020-05-05)
+
+### 新特性
+* 【core   】     ImgUtil.createImage支持背景透明（issue#851@Github）
+* 【json   】     更改JSON转字符串时"</"被转义的规则为不转义（issue#852@Github）
+* 【cron   】     表达式的所有段支持L关键字（issue#849@Github）
+* 【extra  】     增加PinyinUtil，封装TinyPinyin
+* 【extra  】     Ftp和Sftp增加FtpConfig，提供超时等更多可选参数
+* 【extra  】     SpringUtil增加getActiveProfiles、getBeansOfType、getBeanNamesForType方法（issue#I1FXF3@Gitee）
+* 【bloomFilter】 避免布隆过滤器数字溢出（pr#119@Gitee）
+* 【core   】     增加IoUtil.writeObj（issue#I1FZIE）
+* 【core   】     增加FastStringWriter
+* 【core   】     增加NumberUtil.ceilDiv方法（pr#858@Github）
+* 【core   】     IdcardUtil增加省份校验（issue#859@Github）
+* 【extra  】     TemplateFactory和TokenizerFactory增加单例的get方法
+
+### Bug修复
+* 【core   】     修复URLBuilder中请求参数有`&amp;`导致的问题（issue#850@Github）
+* 【core   】     修复URLBuilder中路径以`/`结尾导致的问题（issue#I1G44J@Gitee）
+* 【db     】     修复SqlBuilder中orderBy无效问题（issue#856@Github）
+* 【core   】     修复StrUtil.subBetweenAll错误问题（issue#861@Github）
+
+-------------------------------------------------------------------------------------------------------------
+
 ## 5.3.2 (2020-04-23)
 
 ### 新特性

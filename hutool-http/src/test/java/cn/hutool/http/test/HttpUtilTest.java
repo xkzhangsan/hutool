@@ -19,7 +19,7 @@ import java.util.Map;
 public class HttpUtilTest {
 
 	@Test
-//	@Ignore
+	@Ignore
 	public void postTest() {
 		String result = HttpUtil.createPost("api.uhaozu.com/goods/description/1120448506").charset(CharsetUtil.UTF_8).execute().body();
 		Console.log(result);
@@ -123,6 +123,14 @@ public class HttpUtilTest {
 		Assert.assertEquals("0", map.get("uuuu").get(0));
 		Assert.assertEquals("b", map.get("a").get(0));
 		Assert.assertEquals("?#@!$%^&=dsssss555555", map.get("c").get(0));
+	}
+
+	@Test
+	public void decodeParamMapTest() {
+		// 参数值存在分界标记等号时
+		Map<String, String> paramMap = HttpUtil.decodeParamMap("https://www.xxx.com/api.action?aa=123&f_token=NzBkMjQxNDM1MDVlMDliZTk1OTU3ZDI1OTI0NTBiOWQ=", CharsetUtil.CHARSET_UTF_8);
+		Assert.assertEquals("123",paramMap.get("aa"));
+		Assert.assertEquals("NzBkMjQxNDM1MDVlMDliZTk1OTU3ZDI1OTI0NTBiOWQ=",paramMap.get("f_token"));
 	}
 
 	@Test
@@ -294,5 +302,14 @@ public class HttpUtilTest {
 	public void getMimeTypeTest() {
 		String mimeType = HttpUtil.getMimeType("aaa.aaa");
 		Assert.assertNull(mimeType);
+	}
+
+	@Test
+	@Ignore
+	public void getWeixinTest(){
+		// 测试特殊URL，即URL中有&amp;情况是否请求正常
+		String url = "https://mp.weixin.qq.com/s?__biz=MzI5NjkyNTIxMg==&amp;mid=100000465&amp;idx=1&amp;sn=1044c0d19723f74f04f4c1da34eefa35&amp;chksm=6cbda3a25bca2ab4516410db6ce6e125badaac2f8c5548ea6e18eab6dc3c5422cb8cbe1095f7";
+		final String s = HttpUtil.get(url);
+		Console.log(s);
 	}
 }

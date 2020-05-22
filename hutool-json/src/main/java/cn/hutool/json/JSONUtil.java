@@ -332,6 +332,19 @@ public final class JSONUtil {
 	}
 
 	/**
+	 * 转为JSON字符串，并写出到write
+	 *
+	 * @param json JSON
+	 * @param writer Writer
+	 * @since 5.3.3
+	 */
+	public static void toJsonStr(JSON json, Writer writer) {
+		if (null != json) {
+			json.write(writer);
+		}
+	}
+
+	/**
 	 * 转为JSON字符串
 	 *
 	 * @param json JSON
@@ -354,10 +367,23 @@ public final class JSONUtil {
 		if (null == obj) {
 			return null;
 		}
-		if (obj instanceof String) {
-			return (String) obj;
+		if (obj instanceof CharSequence) {
+			return StrUtil.str((CharSequence) obj);
 		}
 		return toJsonStr(parse(obj));
+	}
+
+	/**
+	 * 转换为JSON字符串并写出到writer
+	 *
+	 * @param obj 被转为JSON的对象
+	 * @param writer Writer
+	 * @since 5.3.3
+	 */
+	public static void toJsonStr(Object obj, Writer writer) {
+		if (null != obj) {
+			toJsonStr(parse(obj), writer);
+		}
 	}
 
 	/**
@@ -599,13 +625,13 @@ public final class JSONUtil {
 		}
 
 		char b; // 前一个字符
-		char c = 0; // 当前字符
+		char c; // 当前字符
 		int len = str.length();
 		if (isWrap) {
 			writer.write('"');
 		}
 		for (int i = 0; i < len; i++) {
-			b = c;
+//			b = c;
 			c = str.charAt(i);
 			switch (c) {
 				case '\\':
@@ -613,12 +639,13 @@ public final class JSONUtil {
 					writer.write("\\");
 					writer.write(c);
 					break;
-				case '/':
-					if (b == '<') {
-						writer.write('\\');
-					}
-					writer.write(c);
-					break;
+					//此处转义导致输出不和预期一致
+//				case '/':
+//					if (b == '<') {
+//						writer.write('\\');
+//					}
+//					writer.write(c);
+//					break;
 				default:
 					writer.write(escape(c));
 			}

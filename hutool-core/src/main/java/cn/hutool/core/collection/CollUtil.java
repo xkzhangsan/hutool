@@ -49,6 +49,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.function.Function;
 
 /**
  * 集合相关工具类
@@ -144,6 +145,74 @@ public class CollUtil {
 	}
 
 	/**
+	 * 多个集合的非重复并集，类似于SQL中的“UNION DISTINCT”<br>
+	 * 针对一个集合中存在多个相同元素的情况，只保留一个<br>
+	 * 例如：集合1：[a, b, c, c, c]，集合2：[a, b, c, c]<br>
+	 * 结果：[a, b, c]，此结果中只保留了一个c
+	 *
+	 * @param <T>        集合元素类型
+	 * @param coll1      集合1
+	 * @param coll2      集合2
+	 * @param otherColls 其它集合
+	 * @return 并集的集合，返回 {@link LinkedHashSet}
+	 */
+	@SafeVarargs
+	public static <T> Set<T> unionDistinct(Collection<T> coll1, Collection<T> coll2, Collection<T>... otherColls) {
+		final Set<T> result;
+		if (isEmpty(coll1)) {
+			result = new LinkedHashSet<>();
+		} else {
+			result = new LinkedHashSet<>(coll1);
+		}
+
+		if (isNotEmpty(coll2)) {
+			result.addAll(coll2);
+		}
+
+		if (ArrayUtil.isNotEmpty(otherColls)) {
+			for (Collection<T> otherColl : otherColls) {
+				result.addAll(otherColl);
+			}
+		}
+
+		return result;
+	}
+
+	/**
+	 * 多个集合的完全并集，类似于SQL中的“UNION ALL”<br>
+	 * 针对一个集合中存在多个相同元素的情况，保留全部元素<br>
+	 * 例如：集合1：[a, b, c, c, c]，集合2：[a, b, c, c]<br>
+	 * 结果：[a, b, c, c, c, a, b, c, c]
+	 *
+	 * @param <T>        集合元素类型
+	 * @param coll1      集合1
+	 * @param coll2      集合2
+	 * @param otherColls 其它集合
+	 * @return 并集的集合，返回 {@link ArrayList}
+	 */
+	@SafeVarargs
+	public static <T> List<T> unionAll(Collection<T> coll1, Collection<T> coll2, Collection<T>... otherColls) {
+		final List<T> result;
+		if (isEmpty(coll1)) {
+			result = new ArrayList<>();
+		} else {
+			result = new ArrayList<>(coll1);
+		}
+
+		if (isNotEmpty(coll2)) {
+			result.addAll(coll2);
+		}
+
+		if (ArrayUtil.isNotEmpty(otherColls)) {
+			for (Collection<T> otherColl : otherColls) {
+				result.addAll(otherColl);
+			}
+		}
+
+		return result;
+	}
+
+	/**
 	 * 两个集合的交集<br>
 	 * 针对一个集合中存在多个相同元素的情况，计算两个集合中此元素的个数，保留最少的个数<br>
 	 * 例如：集合1：[a, b, c, c, c]，集合2：[a, b, c, c]<br>
@@ -224,7 +293,7 @@ public class CollUtil {
 			return coll1;
 		}
 
-		final ArrayList<T> result = new ArrayList<>();
+		final List<T> result = new ArrayList<>();
 		final Map<T, Integer> map1 = countMap(coll1);
 		final Map<T, Integer> map2 = countMap(coll2);
 		final Set<T> elts = newHashSet(coll2);
@@ -254,6 +323,39 @@ public class CollUtil {
 	public static <T> Collection<T> subtract(Collection<T> coll1, Collection<T> coll2) {
 		final Collection<T> result = ObjectUtil.clone(coll1);
 		result.removeAll(coll2);
+		return result;
+	}
+
+	/**
+	 * 计算集合的单差集，即只返回【集合1】中有，但是【集合2】中没有的元素，例如：
+	 *
+	 * <pre>
+	 *     subtractToList([1,2,3,4],[2,3,4,5]) -》 [1]
+	 * </pre>
+	 *
+	 * @param coll1 集合1
+	 * @param coll2 集合2
+	 * @param <T>   元素类型
+	 * @return 单差集
+	 * @since 5.3.5
+	 */
+	public static <T> List<T> subtractToList(Collection<T> coll1, Collection<T> coll2) {
+
+		if (isEmpty(coll1)) {
+			return ListUtil.empty();
+		}
+		if (isEmpty(coll2)) {
+			return ListUtil.list(true, coll2);
+		}
+
+		//将被交数用链表储存，防止因为频繁扩容影响性能
+		final List<T> result = new LinkedList<>();
+		Set<T> set = new HashSet<>(coll2);
+		for (T t : coll1) {
+			if (false == set.contains(t)) {
+				result.add(t);
+			}
+		}
 		return result;
 	}
 
@@ -307,7 +409,15 @@ public class CollUtil {
 	 * @since 4.5.12
 	 */
 	public static boolean containsAll(Collection<?> coll1, Collection<?> coll2) {
-		if (isEmpty(coll1) || isEmpty(coll2) || coll1.size() < coll2.size()) {
+		if (isEmpty(coll1)) {
+			return isEmpty(coll2);
+		}
+
+		if (isEmpty(coll2)) {
+			return true;
+		}
+
+		if (coll1.size() < coll2.size()) {
 			return false;
 		}
 
@@ -1161,17 +1271,34 @@ public class CollUtil {
 	 * @param editor     编辑器
 	 * @param ignoreNull 是否忽略空值
 	 * @return 抽取后的新列表
+	 * @see #map(Iterable, Function, boolean)
 	 * @since 4.5.7
 	 */
 	public static List<Object> extract(Iterable<?> collection, Editor<Object> editor, boolean ignoreNull) {
-		final List<Object> fieldValueList = new ArrayList<>();
+		return map(collection, editor::edit, ignoreNull);
+	}
+
+	/**
+	 * 通过func自定义一个规则，此规则将原集合中的元素转换成新的元素，生成新的列表返回<br>
+	 * 例如提供的是一个Bean列表，通过Function接口实现获取某个字段值，返回这个字段值组成的新列表
+	 *
+	 * @param <T>        集合元素类型
+	 * @param <R>        返回集合元素类型
+	 * @param collection 原集合
+	 * @param func       编辑函数
+	 * @param ignoreNull 是否忽略空值
+	 * @return 抽取后的新列表
+	 * @since 5.3.5
+	 */
+	public static <T, R> List<R> map(Iterable<T> collection, Function<T, R> func, boolean ignoreNull) {
+		final List<R> fieldValueList = new ArrayList<>();
 		if (null == collection) {
 			return fieldValueList;
 		}
 
-		Object value;
-		for (Object bean : collection) {
-			value = editor.edit(bean);
+		R value;
+		for (T bean : collection) {
+			value = func.apply(bean);
 			if (null == value && ignoreNull) {
 				continue;
 			}
@@ -1204,7 +1331,7 @@ public class CollUtil {
 	 * @since 4.5.7
 	 */
 	public static List<Object> getFieldValues(Iterable<?> collection, final String fieldName, boolean ignoreNull) {
-		return extract(collection, bean -> {
+		return map(collection, bean -> {
 			if (bean instanceof Map) {
 				return ((Map<?, ?>) bean).get(fieldName);
 			} else {
