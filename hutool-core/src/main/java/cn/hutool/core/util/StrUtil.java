@@ -1510,7 +1510,7 @@ public class StrUtil {
 	}
 
 	/**
-	 * 切分字符串
+	 * 切分字符串，如果分隔符不存在则返回原字符串
 	 *
 	 * @param str       被切分的字符串
 	 * @param separator 分隔符
@@ -1741,14 +1741,14 @@ public class StrUtil {
 	 * 如果分隔字符串为空串""，则返回空串，如果分隔字符串未找到，返回原字符串，举例如下：
 	 *
 	 * <pre>
-	 * StrUtil.subBefore(null, *)      = null
-	 * StrUtil.subBefore("", *)        = ""
-	 * StrUtil.subBefore("abc", "a")   = ""
-	 * StrUtil.subBefore("abcba", "b") = "a"
-	 * StrUtil.subBefore("abc", "c")   = "ab"
-	 * StrUtil.subBefore("abc", "d")   = "abc"
-	 * StrUtil.subBefore("abc", "")    = ""
-	 * StrUtil.subBefore("abc", null)  = "abc"
+	 * StrUtil.subBefore(null, *, false)      = null
+	 * StrUtil.subBefore("", *, false)        = ""
+	 * StrUtil.subBefore("abc", "a", false)   = ""
+	 * StrUtil.subBefore("abcba", "b", false) = "a"
+	 * StrUtil.subBefore("abc", "c", false)   = "ab"
+	 * StrUtil.subBefore("abc", "d", false)   = "abc"
+	 * StrUtil.subBefore("abc", "", false)    = ""
+	 * StrUtil.subBefore("abc", null, false)  = "abc"
 	 * </pre>
 	 *
 	 * @param string          被查找的字符串
@@ -1783,12 +1783,12 @@ public class StrUtil {
 	 * 如果分隔字符串未找到，返回原字符串，举例如下：
 	 *
 	 * <pre>
-	 * StrUtil.subBefore(null, *)      = null
-	 * StrUtil.subBefore("", *)        = ""
-	 * StrUtil.subBefore("abc", 'a')   = ""
-	 * StrUtil.subBefore("abcba", 'b') = "a"
-	 * StrUtil.subBefore("abc", 'c')   = "ab"
-	 * StrUtil.subBefore("abc", 'd')   = "abc"
+	 * StrUtil.subBefore(null, *, false)      = null
+	 * StrUtil.subBefore("", *, false)        = ""
+	 * StrUtil.subBefore("abc", 'a', false)   = ""
+	 * StrUtil.subBefore("abcba", 'b', false) = "a"
+	 * StrUtil.subBefore("abc", 'c', false)   = "ab"
+	 * StrUtil.subBefore("abc", 'd', false)   = "abc"
 	 * </pre>
 	 *
 	 * @param string          被查找的字符串
@@ -1819,14 +1819,14 @@ public class StrUtil {
 	 * 如果分隔字符串为空串（null或""），则返回空串，如果分隔字符串未找到，返回空串，举例如下：
 	 *
 	 * <pre>
-	 * StrUtil.subAfter(null, *)      = null
-	 * StrUtil.subAfter("", *)        = ""
-	 * StrUtil.subAfter(*, null)      = ""
-	 * StrUtil.subAfter("abc", "a")   = "bc"
-	 * StrUtil.subAfter("abcba", "b") = "cba"
-	 * StrUtil.subAfter("abc", "c")   = ""
-	 * StrUtil.subAfter("abc", "d")   = ""
-	 * StrUtil.subAfter("abc", "")    = "abc"
+	 * StrUtil.subAfter(null, *, false)      = null
+	 * StrUtil.subAfter("", *, false)        = ""
+	 * StrUtil.subAfter(*, null, false)      = ""
+	 * StrUtil.subAfter("abc", "a", false)   = "bc"
+	 * StrUtil.subAfter("abcba", "b", false) = "cba"
+	 * StrUtil.subAfter("abc", "c", false)   = ""
+	 * StrUtil.subAfter("abc", "d", false)   = ""
+	 * StrUtil.subAfter("abc", "", false)    = "abc"
 	 * </pre>
 	 *
 	 * @param string          被查找的字符串
@@ -1857,12 +1857,12 @@ public class StrUtil {
 	 * 如果分隔字符串为空串（null或""），则返回空串，如果分隔字符串未找到，返回空串，举例如下：
 	 *
 	 * <pre>
-	 * StrUtil.subAfter(null, *)      = null
-	 * StrUtil.subAfter("", *)        = ""
-	 * StrUtil.subAfter("abc", 'a')   = "bc"
-	 * StrUtil.subAfter("abcba", 'b') = "cba"
-	 * StrUtil.subAfter("abc", 'c')   = ""
-	 * StrUtil.subAfter("abc", 'd')   = ""
+	 * StrUtil.subAfter(null, *, false)      = null
+	 * StrUtil.subAfter("", *, false)        = ""
+	 * StrUtil.subAfter("abc", 'a', false)   = "bc"
+	 * StrUtil.subAfter("abcba", 'b', false) = "cba"
+	 * StrUtil.subAfter("abc", 'c', false)   = ""
+	 * StrUtil.subAfter("abc", 'd', false)   = ""
 	 * </pre>
 	 *
 	 * @param string          被查找的字符串
@@ -1976,11 +1976,14 @@ public class StrUtil {
 	 * @since 5.2.5
 	 */
 	public static String[] subBetweenAll(CharSequence str, CharSequence prefix, CharSequence suffix) {
-		if (hasEmpty(str, prefix, suffix)) {
+		if (hasEmpty(str, prefix, suffix) ||
+				// 不包含起始字符串，则肯定没有子串
+				false == contains(str, prefix)) {
 			return new String[0];
 		}
 
 		final List<String> result = new LinkedList<>();
+		final String[] split = split(str, prefix);
 		for (String fragment : split(str, prefix)) {
 			int suffixIndex = fragment.indexOf(suffix.toString());
 			if (suffixIndex > 0) {
@@ -2950,7 +2953,7 @@ public class StrUtil {
 	 * StrUtil.padAfter("123", 2, '0');//"23"
 	 * </pre>
 	 *
-	 * @param str       字符串，如果为<code>null</code>，按照空串处理
+	 * @param str       字符串，如果为<code>null</code>，直接返回null
 	 * @param minLength 最小长度
 	 * @param padChar   补充的字符
 	 * @return 补充后的字符串
@@ -2978,7 +2981,7 @@ public class StrUtil {
 	 * StrUtil.padAfter("123", 2, "ABC");//"23"
 	 * </pre>
 	 *
-	 * @param str       字符串，如果为<code>null</code>，按照空串处理
+	 * @param str       字符串，如果为<code>null</code>，直接返回null
 	 * @param minLength 最小长度
 	 * @param padStr    补充的字符
 	 * @return 补充后的字符串

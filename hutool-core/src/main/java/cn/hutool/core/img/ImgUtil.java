@@ -2,7 +2,6 @@ package cn.hutool.core.img;
 
 import cn.hutool.core.codec.Base64;
 import cn.hutool.core.convert.Convert;
-import cn.hutool.core.exceptions.UtilException;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IORuntimeException;
 import cn.hutool.core.io.IoUtil;
@@ -13,6 +12,7 @@ import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.URLUtil;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -24,10 +24,10 @@ import javax.imageio.stream.ImageInputStream;
 import javax.imageio.stream.ImageOutputStream;
 import java.awt.Color;
 import java.awt.Font;
-import java.awt.FontFormatException;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.AffineTransform;
@@ -1262,6 +1262,20 @@ public class ImgUtil {
 	}
 
 	/**
+	 * 将图片对象转换为Base64的Data URI形式，格式为：data:image/[imageType];base64,[data]
+	 *
+	 * @param image     图片对象
+	 * @param imageType 图片类型
+	 * @return Base64的字符串表现形式
+	 * @since 5.3.6
+	 */
+	public static String toBase64DateUri(Image image, String imageType) {
+		return URLUtil.getDataUri(
+				"image/" + imageType, "base64",
+				toBase64(image, imageType));
+	}
+
+	/**
 	 * 将图片对象转换为Base64形式
 	 *
 	 * @param image     图片对象
@@ -1362,18 +1376,7 @@ public class ImgUtil {
 	 * @since 3.0.9
 	 */
 	public static Font createFont(File fontFile) {
-		try {
-			return Font.createFont(Font.TRUETYPE_FONT, fontFile);
-		} catch (FontFormatException e) {
-			// True Type字体无效时使用Type1字体
-			try {
-				return Font.createFont(Font.TYPE1_FONT, fontFile);
-			} catch (Exception e1) {
-				throw new UtilException(e);
-			}
-		} catch (IOException e) {
-			throw new IORuntimeException(e);
-		}
+		return FontUtil.createFont(fontFile);
 	}
 
 	/**
@@ -1385,18 +1388,7 @@ public class ImgUtil {
 	 * @since 3.0.9
 	 */
 	public static Font createFont(InputStream fontStream) {
-		try {
-			return Font.createFont(Font.TRUETYPE_FONT, fontStream);
-		} catch (FontFormatException e) {
-			// True Type字体无效时使用Type1字体
-			try {
-				return Font.createFont(Font.TYPE1_FONT, fontStream);
-			} catch (Exception e1) {
-				throw new UtilException(e1);
-			}
-		} catch (IOException e) {
-			throw new IORuntimeException(e);
-		}
+		return FontUtil.createFont(fontStream);
 	}
 
 	/**
@@ -1773,13 +1765,23 @@ public class ImgUtil {
 	 * @since 4.1.14
 	 */
 	public static String toHex(Color color) {
-		String R = Integer.toHexString(color.getRed());
-		R = R.length() < 2 ? ('0' + R) : R;
-		String G = Integer.toHexString(color.getGreen());
-		G = G.length() < 2 ? ('0' + G) : G;
-		String B = Integer.toHexString(color.getBlue());
-		B = B.length() < 2 ? ('0' + B) : B;
-		return '#' + R + G + B;
+		return toHex(color.getRed(), color.getGreen(), color.getBlue());
+	}
+
+	/**
+	 * RGB颜色值转换成十六进制颜色码
+	 *
+	 * @param r 红(R)
+	 * @param g 绿(G)
+	 * @param b 蓝(B)
+	 * @return 返回字符串形式的 十六进制颜色码 如
+	 */
+	public static String toHex(int r, int g, int b) {
+		// rgb 小于 255
+		if(r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255){
+			throw new IllegalArgumentException("RGB must be 0~255!");
+		}
+		return String.format("#%02X%02X%02X", r, g, b);
 	}
 
 	/**
@@ -1901,5 +1903,114 @@ public class ImgUtil {
 			random = RandomUtil.getRandom();
 		}
 		return new Color(random.nextInt(255), random.nextInt(255), random.nextInt(255));
+	}
+
+	/**
+	 * 获得修正后的矩形坐标位置，变为以背景中心为基准坐标（即x,y == 0,0时，处于背景正中）
+	 *
+	 * @param rectangle  矩形
+	 * @param backgroundWidth  参考宽（背景宽）
+	 * @param backgroundHeight  参考高（背景高）
+	 * @return 修正后的{@link Point}
+	 * @since 5.3.6
+	 */
+	public static Point getPointBaseCentre(Rectangle rectangle, int backgroundWidth, int backgroundHeight) {
+		return new Point(
+				rectangle.x + (Math.abs(backgroundWidth - rectangle.width) / 2), //
+				rectangle.y + (Math.abs(backgroundHeight - rectangle.height) / 2)//
+		);
+	}
+
+	// ------------------------------------------------------------------------------------------------------ 背景图换算
+
+	/**
+	 * 背景移除
+	 * 图片去底工具
+	 * 将 "纯色背景的图片" 还原成 "透明背景的图片"
+	 * 将纯色背景的图片转成矢量图
+	 * 取图片边缘的像素点和获取到的图片主题色作为要替换的背景色
+	 * 再加入一定的容差值,然后将所有像素点与该颜色进行比较
+	 * 发现相同则将颜色不透明度设置为0,使颜色完全透明.
+	 *
+	 * @param inputPath  要处理图片的路径
+	 * @param outputPath 输出图片的路径
+	 * @param tolerance  容差值[根据图片的主题色,加入容差值,值的范围在0~255之间]
+	 * @return 返回处理结果 true:图片处理完成 false:图片处理失败
+	 */
+	public static boolean backgroundRemoval(String inputPath, String outputPath, int tolerance) {
+		return BackgroundRemoval.backgroundRemoval(inputPath, outputPath, tolerance);
+	}
+
+	/**
+	 * 背景移除
+	 * 图片去底工具
+	 * 将 "纯色背景的图片" 还原成 "透明背景的图片"
+	 * 将纯色背景的图片转成矢量图
+	 * 取图片边缘的像素点和获取到的图片主题色作为要替换的背景色
+	 * 再加入一定的容差值,然后将所有像素点与该颜色进行比较
+	 * 发现相同则将颜色不透明度设置为0,使颜色完全透明.
+	 *
+	 * @param input     需要进行操作的图片
+	 * @param output    最后输出的文件
+	 * @param tolerance 容差值[根据图片的主题色,加入容差值,值的取值范围在0~255之间]
+	 * @return 返回处理结果 true:图片处理完成 false:图片处理失败
+	 */
+	public static boolean backgroundRemoval(File input, File output, int tolerance) {
+		return BackgroundRemoval.backgroundRemoval(input, output, tolerance);
+	}
+
+	/**
+	 * 背景移除
+	 * 图片去底工具
+	 * 将 "纯色背景的图片" 还原成 "透明背景的图片"
+	 * 将纯色背景的图片转成矢量图
+	 * 取图片边缘的像素点和获取到的图片主题色作为要替换的背景色
+	 * 再加入一定的容差值,然后将所有像素点与该颜色进行比较
+	 * 发现相同则将颜色不透明度设置为0,使颜色完全透明.
+	 *
+	 * @param input     需要进行操作的图片
+	 * @param output    最后输出的文件
+	 * @param override  指定替换成的背景颜色 为null时背景为透明
+	 * @param tolerance 容差值[根据图片的主题色,加入容差值,值的取值范围在0~255之间]
+	 * @return 返回处理结果 true:图片处理完成 false:图片处理失败
+	 */
+	public static boolean backgroundRemoval(File input, File output, Color override, int tolerance) {
+		return BackgroundRemoval.backgroundRemoval(input, output, override, tolerance);
+	}
+
+	/**
+	 * 背景移除
+	 * 图片去底工具
+	 * 将 "纯色背景的图片" 还原成 "透明背景的图片"
+	 * 将纯色背景的图片转成矢量图
+	 * 取图片边缘的像素点和获取到的图片主题色作为要替换的背景色
+	 * 再加入一定的容差值,然后将所有像素点与该颜色进行比较
+	 * 发现相同则将颜色不透明度设置为0,使颜色完全透明.
+	 *
+	 * @param bufferedImage 需要进行处理的图片流
+	 * @param override      指定替换成的背景颜色 为null时背景为透明
+	 * @param tolerance     容差值[根据图片的主题色,加入容差值,值的取值范围在0~255之间]
+	 * @return 返回处理好的图片流
+	 */
+	public static BufferedImage backgroundRemoval(BufferedImage bufferedImage, Color override, int tolerance) {
+		return BackgroundRemoval.backgroundRemoval(bufferedImage, override, tolerance);
+	}
+
+	/**
+	 * 背景移除
+	 * 图片去底工具
+	 * 将 "纯色背景的图片" 还原成 "透明背景的图片"
+	 * 将纯色背景的图片转成矢量图
+	 * 取图片边缘的像素点和获取到的图片主题色作为要替换的背景色
+	 * 再加入一定的容差值,然后将所有像素点与该颜色进行比较
+	 * 发现相同则将颜色不透明度设置为0,使颜色完全透明.
+	 *
+	 * @param outputStream 需要进行处理的图片字节数组流
+	 * @param override     指定替换成的背景颜色 为null时背景为透明
+	 * @param tolerance    容差值[根据图片的主题色,加入容差值,值的取值范围在0~255之间]
+	 * @return 返回处理好的图片流
+	 */
+	public static BufferedImage backgroundRemoval(ByteArrayOutputStream outputStream, Color override, int tolerance) {
+		return BackgroundRemoval.backgroundRemoval(outputStream, override, tolerance);
 	}
 }
